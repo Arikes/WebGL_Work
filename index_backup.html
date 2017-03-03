@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>webGL demo</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000;
+				color: #000;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				position: absolute;
+				padding: 10px;
+				width: 100%;
+				text-align: center;
+			}
+
+			a {
+				text-decoration: underline;
+				cursor: pointer;
+			}
+ 			#slider .ui-slider-range { background: #ef2929; }
+		</style>
+		
+		<script type="text/javascript">
+            //1直角转弯
+            var QuarterNodes = new Array();
+            //2侧方停车
+            var ParallelParkingNodes = new Array();
+            //3倒车入库
+            var ReverseParkingNodes = new Array();
+            //4曲线行驶
+            var CurveDrivingNodes = new Array();
+            //5坡道停车
+            var SlopeParkingNodes = new Array();
+            
+            var CarPoses = [];
+            
+            var playgrounds = null;
+
+			function locateBarn()
+			{
+				var barnID = getUrlParam("barnID");
+			        	var pathType =-1;
+
+			            var val = barnID;
+						if(val.indexOf("QT")!=-1)
+							pathType = 0;
+						else if(val.indexOf("RP")!=-1)
+							pathType=1;
+						else if(val.indexOf("PP")!=-1)
+							pathType=2;				
+						else if(val.indexOf("CD")!=-1)
+							pathType=3;
+						else if(val.indexOf("SP")!=-1)
+							pathType=4;
+
+						var centerX=0.0,centerY=0.0,centerX2=0.0,centerY2=0.0;
+
+						switch(pathType)
+						{
+							case -1:
+								break;
+							case 0:
+								// alert("直接转弯"+val);
+								{
+									for(var i=0;i<QuarterNodes.length;i++)
+									{
+										if (QuarterNodes[i]["CODE"]==val) 
+										{
+											var points = QuarterNodes[i]["Points"];
+            								//直角转弯定位	（2—看向->1）
+									        centerX = QuarterNodes[i]["Points"][1]["x"];
+									        centerY = QuarterNodes[i]["Points"][1]["y"];
+
+									        centerX2 = QuarterNodes[i]["Points"][2]["x"];
+									        centerY2 = QuarterNodes[i]["Points"][2]["y"];
+										}
+									}
+								}
+								camera.setFocalLength(290);
+								break;
+							case 1:
+								// alert("倒车入库"+val);
+								// 倒车入库定位中心为3跟6的中心点，相机位置摆放在4跟5的中心。
+									for(var i=0;i<ReverseParkingNodes.length;i++)
+									{								
+										if (ReverseParkingNodes[i]["CODE"]==val) 
+										{
+											var points = ReverseParkingNodes[i]["Points"]; 								
+
+         									centerX = (parseFloat(ReverseParkingNodes[i]["Points"][3]["x"])+parseFloat(ReverseParkingNodes[i]["Points"][6]["x"]))/2.0;
+         									centerY = (parseFloat(ReverseParkingNodes[i]["Points"][3]["y"])+parseFloat(ReverseParkingNodes[i]["Points"][6]["y"]))/2.0;
+
+         									centerX2 = (parseFloat(ReverseParkingNodes[i]["Points"][4]["x"])+parseFloat(ReverseParkingNodes[i]["Points"][5]["x"]))/2.0;
+         									centerY2 = (parseFloat(ReverseParkingNodes[i]["Points"][4]["y"])+parseFloat(ReverseParkingNodes[i]["Points"][5]["y"]))/2.0;
+										}	
+									}		
+								camera.setFocalLength(250);
+								break;
+							case 2:
+								for (var i = 0; i < ParallelParkingNodes.length; i++) {
+									if (ParallelParkingNodes[i]["CODE"]==val) 
+										{
+											var points = ParallelParkingNodes[i]["Points"]; 								
+
+         									parseFloat(ParallelParkingNodes[0]["Points"][3]["x"]);
+
+         									centerX = (parseFloat(ParallelParkingNodes[i]["Points"][3]["x"])+parseFloat(ParallelParkingNodes[i]["Points"][6]["x"]))/2.0;
+         									centerY = (parseFloat(ParallelParkingNodes[i]["Points"][3]["y"])+parseFloat(ParallelParkingNodes[i]["Points"][6]["y"]))/2.0;
+
+         									centerX2 = (parseFloat(ParallelParkingNodes[i]["Points"][2]["x"])+parseFloat(ParallelParkingNodes[i]["Points"][2]["x"]))/2.0;
+         									centerY2 = (parseFloat(ParallelParkingNodes[i]["Points"][2]["y"])+parseFloat(ParallelParkingNodes[i]["Points"][2]["y"]))/2.0;											
+										}
+								}
+								camera.setFocalLength(190);
+								break;
+							case 3:
+//								alert("曲线行驶"+val);
+								for (var i = 0; i < CurveDrivingNodes.length; i++) {
+									if (CurveDrivingNodes[i]["CODE"]==val) 
+										{
+											var left_points = CurveDrivingNodes[i]["pointTypes"][0]["points"]; 	
+											var right_points = CurveDrivingNodes[i]["pointTypes"][1]["points"]; 	
+											
+         									centerX = (parseFloat(left_points[0]["x"])+parseFloat(left_points[left_points.length-1]["x"]))/2.0;
+         									centerY = (parseFloat(left_points[0]["y"])+parseFloat(left_points[left_points.length-1]["y"]))/2.0;
+
+         									centerX2 = (parseFloat(left_points[0]["x"]));
+         									centerY2 = (parseFloat(left_points[0]["y"]));											
+										}
+								}
+								camera.setFocalLength(130);
+								break;
+								
+							case 4:
+								
+								break;
+						}
+
+						camera.position.x = centerX2;
+						camera.position.y = 0;
+						camera.position.z = centerY2;
+						moveObj.position.x = centerX;
+						moveObj.position.y=-250;
+						moveObj.position.z=centerY;							
+						targetObj =new THREE.Vector3(centerX,-250,centerY);					
+			}
+
+            var initData = function()
+            {
+                $.get('xmlExample/Map_Field.xml',function(data){ 
+                    var result = "result is:";
+
+                    $(data).find("QuarterTurnNode").find("QuarterTurn").each(function(i){
+
+                        var pushItem = {};
+                        pushItem["CODE"]=$(this).attr("CODE").toString();
+
+						var opt = document.createElement("option");
+						opt.innerHTML = $(this).attr("CODE").toString();
+
+                        pushItem["username"]=$(this).find("username").text();
+                        pushItem["PointType"]=$(this).find("PointType").attr("Type").toString();
+
+                        var points = new Array;
+                        $(this).find("PointType").find("Point").each(function(i){
+                            var pointObj ={};
+                            pointObj["Index"]= $(this).attr("Index").toString();
+                            pointObj["Direc"]= $(this).attr("Direc").toString();
+                            pointObj["x"]= $(this).attr("x").toString();
+                            pointObj["y"]= $(this).attr("y").toString();
+                            pointObj["z"]= $(this).attr("z").toString();
+                            points.push(pointObj);
+                        });
+
+                        pushItem["Points"]=points;
+                        QuarterNodes.push(pushItem);                 
+                    });
+
+
+                    $(data).find("ParallelParkingNode").find("ParallelParking").each(function(i){
+
+                        var pushItem = {};
+                        pushItem["CODE"]=$(this).attr("CODE").toString();
+
+						var opt = document.createElement("option");
+						opt.innerHTML = $(this).attr("CODE").toString();
+
+                        pushItem["PointType"]=$(this).find("PointType").attr("Type").toString();
+
+                        var points = new Array;
+                        $(this).find("PointType").find("Point").each(function(i){
+                            var pointObj ={};
+                            pointObj["Index"]= $(this).attr("Index").toString();
+                            pointObj["Direc"]= $(this).attr("Direc").toString();
+                            pointObj["x"]= $(this).attr("x").toString();
+                            pointObj["y"]= $(this).attr("y").toString();
+                            pointObj["z"]= $(this).attr("z").toString();
+                            points.push(pointObj);
+                        });
+
+                        pushItem["Points"]=points;
+                        ParallelParkingNodes.push(pushItem);                 
+                    });    
+
+
+                    $(data).find("ReverseParkingNode").find("ReverseParking").each(function(i){
+
+                        var pushItem = {};
+                        pushItem["CODE"]=$(this).attr("CODE").toString();
+
+						var opt = document.createElement("option");
+						opt.innerHTML = $(this).attr("CODE").toString();
+
+                        pushItem["PointType"]=$(this).find("PointType").attr("Type").toString();
+
+                        var points = new Array;
+                        $(this).find("PointType").find("Point").each(function(i){
+                            var pointObj ={};
+                            pointObj["Index"]= $(this).attr("Index").toString();
+                            pointObj["Direc"]= $(this).attr("Direc").toString();
+                            pointObj["x"]= $(this).attr("x").toString();
+                            pointObj["y"]= $(this).attr("y").toString();
+                            pointObj["z"]= $(this).attr("z").toString();
+                            points.push(pointObj);
+                        });
+
+                        pushItem["Points"]=points;
+                        ReverseParkingNodes.push(pushItem);                 
+                    }); 
+
+
+                    $(data).find("CurveDrivingNode").find("CurveDriving").each(function(i){
+                    	var tempItem = {};
+                    	tempItem["CODE"]=$(this).attr("CODE").toString();
+
+						var opt = document.createElement("option");
+						opt.innerHTML = $(this).attr("CODE").toString();
+
+						var pointTypeItems = new Array;
+                    	$(this).find("PointType").each(function(i){
+                    		var PointTypeItem = {};
+                    		PointTypeItem["type"]=$(this).attr("Type").toString();
+                    		var Points = new Array;
+                    		$(this).find("Point").each(function(i){
+                    			var curPoint={};
+                    			curPoint["Index"] = $(this).attr("Index").toString();
+                    			curPoint["Direc"] = $(this).attr("Direc").toString();
+                    			curPoint["x"] = $(this).attr("x").toString();
+                    			curPoint["y"] = $(this).attr("y").toString();
+                    			curPoint["z"] = $(this).attr("z").toString();
+
+                    			Points.push(curPoint);
+                    		});
+
+                    		PointTypeItem["points"]= Points;
+                    		// alert(PointTypeItem["points"].length.toString());
+                    		pointTypeItems.push(PointTypeItem);
+                    	});
+                    	tempItem["pointTypes"]= pointTypeItems;
+                    	CurveDrivingNodes.push(tempItem);
+
+                    });
+                    
+                    $(data).find("SlopeParkingNode").find("SlopeParking").each(function(i){
+                    	var tempItem = {};
+                    	tempItem["CODE"]=$(this).attr("CODE").toString();
+                    	
+                    	var wallArray = [];
+                    	
+						$(this).children("PointType").each(function(i){
+							var tempOneWall = {};
+//							alert($(this).attr("Type").toString());
+							tempOneWall["WallType"]=$(this).attr("Type").toString();
+							
+							$(this).children("WallPointType").each(function(i){
+								var CurPointArray=[];
+								
+								$(this).children("Point").each(function(i){
+									var tempPoint = {};
+									
+									tempPoint["Index"]=$(this).attr("Index").toString();
+									tempPoint["Direc"]=$(this).attr("Direc").toString();
+									tempPoint["x"]=$(this).attr("x").toString();
+									tempPoint["y"]=$(this).attr("y").toString();
+									tempPoint["z"]=$(this).attr("z").toString();
+									
+									CurPointArray.push(tempPoint);
+								});
+								
+								var typeName = $(this).attr("Type").toString();
+//								alert(typeName);
+								if(typeName == "StartPoint")
+								{
+									tempOneWall["StartPoint"]=CurPointArray;
+								}
+								else if(typeName == "ForeArcPoint")
+								{
+									tempOneWall["ForeArcPoint"]=CurPointArray;
+								}
+								else if(typeName == "TopPoint")
+								{
+									tempOneWall["TopPoint"]=CurPointArray;
+								}
+									
+								else if(typeName == "BackArcPoint")
+									tempOneWall["BackArcPoint"]=CurPointArray;
+								else if(typeName == "EndPoint")
+									tempOneWall["EndPoint"]=CurPointArray;
+								
+							});
+							wallArray.push(tempOneWall);
+						});   
+						tempItem["wallArray"]=wallArray;
+                    	
+                    	var slopeArray = [];
+                    	//each SLOP
+                    	$(this).children("Slope").each(function(i){
+                    		var oneSlope = {};
+                    		$(this).children("PointType").each(function(i){
+                    			//LeftLine,RightLine,ControlLine1,ControlLine2,ControlLine3,Wall
+//                  			alert($(this).attr("Type").toString());
+                    			if($(this).attr("Type").toString()!="Wall")
+                    			{
+                    				var pointArray = [];
+                    				$(this).children("Point").each(function(i){
+                    					var tempPoint = {};
+                    					
+                    					tempPoint["Index"]=$(this).attr("Index").toString();
+                    					tempPoint["Direc"]=$(this).attr("Direc").toString();
+                    					tempPoint["x"]=$(this).attr("x").toString();
+                    					tempPoint["y"]=$(this).attr("y").toString();
+                    					tempPoint["z"]=$(this).attr("z").toString();
+                    					
+                    					pointArray.push(tempPoint);
+                    				});	
+                    				oneSlope[$(this).attr("Type").toString()] = pointArray;
+                    			}else
+                    			{
+                    				var wallItem = [];
+                    				
+                    				$(this).children("WallPointType").each(function(i){
+                    					var tempOneTypePoint = {};
+                    					tempOneTypePoint["WallPointType"] = $(this).attr("Type").toString();
+                    					var points = [];
+                    					
+                    					$(this).children("Point").each(function(i){
+                    						var point = {};
+                    						
+                    						point["Index"]=$(this).attr("Index").toString();
+                    						point["Direc"]=$(this).attr("Direc").toString();
+                    						point["x"]=$(this).attr("x").toString();
+                    						point["y"]=$(this).attr("y").toString();
+                    						point["z"]=$(this).attr("z").toString();
+                    						
+                    						points.push(point);
+                    					});
+                    					
+                    					tempOneTypePoint["points"] = points;
+                    					wallItem.push(tempOneTypePoint);
+                    				});
+                    				
+                    				oneSlope["Wall"]=wallItem;
+                    			}
+                    		});
+                    		slopeArray.push(oneSlope);
+                    	});
+                    	tempItem["slopes"] = slopeArray;
+						
+						//end add curItem to Array
+						SlopeParkingNodes.push(tempItem);
+                    });
+                    
+                    bDataOK =true;
+                });
+                
+                $.get('xmlExample/route.xml',function(curdata)
+                {
+					//car routes
+					$(curdata).find("CarPos").find("Position").each(function(i){
+						var carPose = {};
+						carPose["x"]=$(this).attr("x").toString();
+						carPose["y"]=$(this).attr("y").toString();
+						carPose["z"]=$(this).attr("z").toString();
+						carPose["angle"]=$(this).attr("angle").toString();
+						
+						CarPoses.push(carPose);
+					});
+               });
+            
+            }
+		</script>
+
+	</head>
+
+	<body onload="initData()">
+		<div id="info" style="color: #ff0000;"><br/>
+	    <div id="wenzi">  
+	    </div>  					    
+
+    	<script type="text/javascript" src="js/jquery.min.js"></script> 
+		<script src="js/three.min.js"></script>
+		<script src="js/libs/dat.gui.min.js"></script>
+		
+		<script src="js/Detector.js"></script>
+		<script src="js/controls/OrbitControls.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+		<script src="js/Cloth.js"></script>
+
+		<script src="js/loaders/DDSLoader.js"></script>
+		<script src="js/loaders/MTLLoader.js"></script>
+		<script src="js/loaders/OBJLoader.js"></script>
+		<script type="js/font1.js"></script>
+
+		<script src="js/jquery.min.js"></script>
+		<script src="js/jquery-ui.min.js"></script>
+		<link href="css/jquery-ui.min.css" rel="stylesheet">
+		<script>
+			$( "#slider" ).slider();
+//			$( "#slider" ).slider({
+//				range: true,
+//				values: [ 0, 67 ]
+//			});
+			var meninfo=" 易驾佳WebGL Demo测试,对不起，您开的汽车左轮胎压线了";  
+			  
+			function left(){  
+			    var id=document.getElementById("wenzi");  
+			    if(typeof id.textContent=="string"){  
+			        id.textContent=meninfo.substring(0,meninfo.length);   
+			    } else{  
+			        id.innerText=meninfo.substring(0,meninfo.length);  
+			    }                       
+			    meninfo=meninfo+meninfo.substring(0,1);                               
+			    meninfo=meninfo.substring(1,meninfo.length);                         
+			}  
+		  
+		  
+			setInterval(left,100)  			
+			
+			
+		    var bDataOK =false;
+		    var bFirstDraw =true;
+			var bShowSimu = false;
+			var aniIndex =0;
+			
+			var terrainHeight = -250;
+
+			var bToRepaint = false;
+			var bShowModel =false;
+			
+			var mCarmodel ;
+			var moveObj = null;
+			var targetObj = new THREE.Vector3(0,terrainHeight,0);
+			var id = null;
+
+			//tool
+			//倒车入库，侧方停车
+			function drawReverseParkingNodes()
+			{
+				// ParallelParkingNodes[i]["Points"]
+				for (var i = ParallelParkingNodes.length - 1; i >= 0; i--) {
+					var PPPointArray = new Array();
+					for(var index = 0;index<ParallelParkingNodes[i]["Points"].length;index++)
+					{
+						var tempPoint = new THREE.Vector3(parseFloat(ParallelParkingNodes[i]["Points"][index]["x"]),terrainHeight,parseFloat(ParallelParkingNodes[i]["Points"][index]["y"]));
+						PPPointArray.push(tempPoint);
+					}					
+					
+					for(var j=0;j<ParallelParkingNodes[i]["Points"].length-1;j++)
+					{
+						var pt1 = new THREE.Vector3(parseFloat(ParallelParkingNodes[i]["Points"][j]["x"]),terrainHeight,parseFloat(ParallelParkingNodes[i]["Points"][j]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(ParallelParkingNodes[i]["Points"][j+1]["x"]),terrainHeight,parseFloat(ParallelParkingNodes[i]["Points"][j+1]["y"]));
+						drawline(pt1,pt2,0xffffff);
+					}
+					
+					var pt11 = new THREE.Vector3(parseFloat(ParallelParkingNodes[i]["Points"][ParallelParkingNodes[i]["Points"].length-1]["x"]),terrainHeight,parseFloat(ParallelParkingNodes[i]["Points"][ParallelParkingNodes[i]["Points"].length-1]["y"]));
+					var pt12 = new THREE.Vector3(parseFloat(ParallelParkingNodes[i]["Points"][0]["x"]),terrainHeight,parseFloat(ParallelParkingNodes[i]["Points"][0]["y"]));
+					drawline(pt11,pt12,0xffffff);	
+					
+					var pt11 = new THREE.Vector3(parseFloat(ParallelParkingNodes[i]["Points"][3]["x"]),terrainHeight,parseFloat(ParallelParkingNodes[i]["Points"][3]["y"]));
+					var pt12 = new THREE.Vector3(parseFloat(ParallelParkingNodes[i]["Points"][6]["x"]),terrainHeight,parseFloat(ParallelParkingNodes[i]["Points"][6]["y"]));
+					drawline(pt11,pt12,0xffff00,1);	
+					
+					drawTriangle(PPPointArray[0],PPPointArray[6],PPPointArray[7]);
+					drawTriangle(PPPointArray[0],PPPointArray[3],PPPointArray[6]);
+					drawTriangle(PPPointArray[0],PPPointArray[2],PPPointArray[3]);
+					drawTriangle(PPPointArray[0],PPPointArray[1],PPPointArray[2]);
+					drawTriangle(PPPointArray[6],PPPointArray[4],PPPointArray[5]);
+					drawTriangle(PPPointArray[6],PPPointArray[3],PPPointArray[4]);
+				}
+
+				//ReverseParkingNodes
+				for (var i = ReverseParkingNodes.length - 1; i >= 0; i--) {
+					
+					var RPPointArray = new Array();
+					for(var index = 0;index<ReverseParkingNodes[i]["Points"].length;index++)
+					{
+						var tempPoint = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][index]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][index]["y"]));
+						RPPointArray.push(tempPoint);
+					}
+					
+					drawTriangle(RPPointArray[0],RPPointArray[6],RPPointArray[7]);
+					drawTriangle(RPPointArray[1],RPPointArray[2],RPPointArray[3]);
+					drawTriangle(RPPointArray[0],RPPointArray[3],RPPointArray[6]);
+					drawTriangle(RPPointArray[0],RPPointArray[1],RPPointArray[3]);
+					drawTriangle(RPPointArray[3],RPPointArray[5],RPPointArray[6]);
+					drawTriangle(RPPointArray[3],RPPointArray[4],RPPointArray[5]);
+					
+					var pt11 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][1]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][1]["y"]));
+					var pt12 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][2]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][2]["y"]));
+					drawline(pt11,pt12,0xffff00,1);		
+
+					var pt11 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][7]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][7]["y"]));
+					var pt12 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][0]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][0]["y"]));
+					drawline(pt11,pt12,0xffff00,1);
+					
+					var pt11 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][0]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][0]["y"]));
+					var pt12 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][1]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][1]["y"]));
+					drawline(pt11,pt12,0xffffff);		
+					
+					var pt11 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][6]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][6]["y"]));
+					var pt12 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][7]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][7]["y"]));
+					drawline(pt11,pt12,0xffffff);	
+					
+					
+					var pt11 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][2]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][2]["y"]));
+					var pt12 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][3]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][3]["y"]));
+					drawline(pt11,pt12,0xffffff);	
+					
+					var pt11 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][4]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][4]["y"]));
+					var pt12 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][3]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][3]["y"]));
+					drawline(pt11,pt12,0xffffff);
+
+					var pt11 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][5]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][5]["y"]));
+					var pt12 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][6]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][6]["y"]));
+					drawline(pt11,pt12,0xffffff);
+					
+					var pt11 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][5]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][5]["y"]));
+					var pt12 = new THREE.Vector3(parseFloat(ReverseParkingNodes[i]["Points"][4]["x"]),terrainHeight,parseFloat(ReverseParkingNodes[i]["Points"][4]["y"]));
+					drawline(pt11,pt12,0xffffff);					
+				}				
+			}
+			//直角拐弯
+			function drawQuarterTurnNodes()
+			{
+				for (var i = QuarterNodes.length - 1; i >= 0; i--) {
+					var curNode = QuarterNodes[i]["Points"];
+					var pt1 = new THREE.Vector3(parseFloat(curNode[0]["x"]),terrainHeight,parseFloat(curNode[0]["y"]));
+					var pt2 = new THREE.Vector3(parseFloat(curNode[1]["x"]),terrainHeight,parseFloat(curNode[1]["y"]));
+					drawline(pt1,pt2,0xffffff);	
+					
+					var pt1 = new THREE.Vector3(parseFloat(curNode[1]["x"]),terrainHeight,parseFloat(curNode[1]["y"]));
+					var pt2 = new THREE.Vector3(parseFloat(curNode[2]["x"]),terrainHeight,parseFloat(curNode[2]["y"]));
+					drawline(pt1,pt2,0xffffff);	
+					
+					var pt1 = new THREE.Vector3(parseFloat(curNode[3]["x"]),terrainHeight,parseFloat(curNode[3]["y"]));
+					var pt2 = new THREE.Vector3(parseFloat(curNode[4]["x"]),terrainHeight,parseFloat(curNode[4]["y"]));
+					drawline(pt1,pt2,0xffffff);	
+					
+					var pt1 = new THREE.Vector3(parseFloat(curNode[4]["x"]),terrainHeight,parseFloat(curNode[4]["y"]));
+					var pt2 = new THREE.Vector3(parseFloat(curNode[5]["x"]),terrainHeight,parseFloat(curNode[5]["y"]));
+					drawline(pt1,pt2,0xffffff);
+					
+					
+					var pointArray = new Array();
+					for(var index=0;index<QuarterNodes[i]["Points"].length;index++)
+					{
+						var tempPoint = new THREE.Vector3(parseFloat(QuarterNodes[i]["Points"][index]["x"]),terrainHeight,parseFloat(QuarterNodes[i]["Points"][index]["y"]));
+						pointArray.push(tempPoint);
+					}
+					
+					drawTriangle(pointArray[0],pointArray[4],pointArray[5]);
+					drawTriangle(pointArray[0],pointArray[1],pointArray[4]);
+					drawTriangle(pointArray[2],pointArray[4],pointArray[1]);
+					drawTriangle(pointArray[2],pointArray[3],pointArray[4]);
+				}
+				
+			}
+				
+			//曲线行驶
+			function drawCurveDrivingNodes()
+			{
+				// CurveDrivingNodes  
+				 for (var i = 0; i < CurveDrivingNodes.length; i++) {
+				 	var curNode =CurveDrivingNodes[i]["pointTypes"];
+				 	for (var j = 0; j < curNode.length; j++) {
+				 		for (var k = 0; k < curNode[j]["points"].length-1; k++) {
+				 			var pt1 = new THREE.Vector3(parseFloat(curNode[j]["points"][k]["x"]),terrainHeight,parseFloat(curNode[j]["points"][k]["y"]));
+				 			var pt2 = new THREE.Vector3(parseFloat(curNode[j]["points"][k+1]["x"]),terrainHeight,parseFloat(curNode[j]["points"][k+1]["y"]));
+				 			drawline(pt1,pt2,0xffffff);				
+				 		}
+				 	}
+				 	
+									
+					var leftIndex = 0,rightIndex =curNode[1]["points"].length -1;
+					var triangleIndex=1;
+	
+					while(leftIndex<curNode[0]["points"].length -1 && rightIndex>0)
+					{
+						if(triangleIndex%2!=0)
+						{
+							var pt1 = new THREE.Vector3(parseFloat(curNode[0]["points"][leftIndex]["x"]),-250,parseFloat(curNode[0]["points"][leftIndex]["y"]));
+							var pt2 = new THREE.Vector3(parseFloat(curNode[0]["points"][leftIndex+1]["x"]),-250,parseFloat(curNode[0]["points"][leftIndex+1]["y"]));
+							var pt3 = new THREE.Vector3(parseFloat(curNode[1]["points"][rightIndex]["x"]),-250,parseFloat(curNode[1]["points"][rightIndex]["y"]));
+							drawTriangle(pt1,pt2,pt3);						
+							leftIndex++;
+						}else{
+							var pt1 = new THREE.Vector3(parseFloat(curNode[1]["points"][rightIndex]["x"]),-250,parseFloat(curNode[1]["points"][rightIndex]["y"]));
+							var pt2 = new THREE.Vector3(parseFloat(curNode[0]["points"][leftIndex]["x"]),-250,parseFloat(curNode[0]["points"][leftIndex]["y"]));
+							var pt3 = new THREE.Vector3(parseFloat(curNode[1]["points"][rightIndex-1]["x"]),-250,parseFloat(curNode[1]["points"][rightIndex-1]["y"]));
+							drawTriangle(pt1,pt2,pt3);							
+							rightIndex--;
+						}
+						triangleIndex++;
+					}
+					
+					if(leftIndex<=curNode[0]["points"].length-1)
+					{
+						for(;leftIndex<=curNode[0]["points"].length-2;leftIndex++)
+						{
+							var pt1 = new THREE.Vector3(parseFloat(curNode[0]["points"][leftIndex]["x"]),-250,parseFloat(curNode[0]["points"][leftIndex]["y"]));
+							var pt2 = new THREE.Vector3(parseFloat(curNode[0]["points"][leftIndex+1]["x"]),-250,parseFloat(curNode[0]["points"][leftIndex+1]["y"]));
+							var pt3 = new THREE.Vector3(parseFloat(curNode[1]["points"][0]["x"]),-250,parseFloat(curNode[1]["points"][0]["y"]));
+							drawTriangle(pt1,pt2,pt3);					
+						}
+					}
+					
+					if(rightIndex>0)
+					{
+						for(;rightIndex>0;rightIndex--)
+						{
+							var pt1 = new THREE.Vector3(parseFloat(curNode[1]["points"][rightIndex]["x"]),-250,parseFloat(curNode[1]["points"][rightIndex]["y"]));
+							var pt2 = new THREE.Vector3(parseFloat(curNode[0]["points"][leftIndex]["x"]),-250,parseFloat(curNode[0]["points"][leftIndex]["y"]));
+							var pt3 = new THREE.Vector3(parseFloat(curNode[1]["points"][rightIndex-1]["x"]),-250,parseFloat(curNode[1]["points"][rightIndex-1]["y"]));
+							drawTriangle(pt1,pt2,pt3);		
+						}
+					}
+				 }
+
+			}
+			
+			//坡道行驶
+			function drawSlopeParkingNodes()
+			{
+				/*SlopeParkingNodes*/
+				for(var i=0;i<SlopeParkingNodes.length;i++)
+				{
+					var curNode = SlopeParkingNodes[i];
+					//draw bk
+					{
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["StartPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["StartPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["ForeArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["ForeArcPoint"][0]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["StartPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["StartPoint"][0]["y"]));
+						drawTriangle(pt1,pt2,pt3);
+						
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["ForeArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["ForeArcPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["ForeArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["ForeArcPoint"][0]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["StartPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["StartPoint"][0]["y"]));
+						drawTriangle(pt1,pt2,pt3);		
+						
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["ForeArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["ForeArcPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["ForeArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["ForeArcPoint"][0]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["StartPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["StartPoint"][0]["y"]));
+						drawTriangle(pt1,pt2,pt3);		
+						
+						
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["ForeArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["ForeArcPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["ForeArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["ForeArcPoint"][1]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["ForeArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["ForeArcPoint"][0]["y"]));
+						drawTriangle(pt1,pt2,pt3);		
+						
+						
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["ForeArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["ForeArcPoint"][1]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["ForeArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["ForeArcPoint"][1]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["ForeArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["ForeArcPoint"][0]["y"]));
+						drawTriangle(pt1,pt2,pt3);								
+
+						//
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["ForeArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["ForeArcPoint"][1]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["TopPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["TopPoint"][0]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["ForeArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["ForeArcPoint"][1]["y"]));
+						drawTriangle(pt1,pt2,pt3);	
+
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["TopPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["TopPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["TopPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["TopPoint"][0]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["ForeArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["ForeArcPoint"][1]["y"]));
+						drawTriangle(pt1,pt2,pt3);	
+						
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["TopPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["TopPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["BackArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["BackArcPoint"][0]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["TopPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["TopPoint"][0]["y"]));
+						drawTriangle(pt1,pt2,pt3);		
+		
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["BackArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["BackArcPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["BackArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["BackArcPoint"][0]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["TopPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["TopPoint"][0]["y"]));
+						drawTriangle(pt1,pt2,pt3);
+
+
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["BackArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["BackArcPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["BackArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["BackArcPoint"][1]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["BackArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["BackArcPoint"][0]["y"]));
+						drawTriangle(pt1,pt2,pt3);
+						
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["BackArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["BackArcPoint"][1]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["BackArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["BackArcPoint"][1]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["BackArcPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["BackArcPoint"][0]["y"]));
+						drawTriangle(pt1,pt2,pt3);						
+
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["BackArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["BackArcPoint"][1]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["EndPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["EndPoint"][0]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["BackArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["BackArcPoint"][1]["y"]));
+						drawTriangle(pt1,pt2,pt3);		
+						
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][0]["EndPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][0]["EndPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["EndPoint"][0]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["EndPoint"][0]["y"]));
+						var pt3 = new THREE.Vector3(parseFloat(curNode["wallArray"][1]["BackArcPoint"][1]["x"]),terrainHeight,parseFloat(curNode["wallArray"][1]["BackArcPoint"][1]["y"]));
+						drawTriangle(pt1,pt2,pt3);								
+
+					}
+					//end draw bk
+					
+					//start draw wall
+					for(var part=0;part<curNode["wallArray"].length;part++)
+					{
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["StartPoint"][0]["x"]),-250,parseFloat(curNode["wallArray"][part]["StartPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["ForeArcPoint"][0]["x"]),-250,parseFloat(curNode["wallArray"][part]["ForeArcPoint"][0]["y"]));
+						drawline(pt1,pt2,0xffffff);
+					
+						var temp=0;
+						if(curNode["wallArray"][part]["ForeArcPoint"].length>1)
+						{
+							for(temp=0;temp<curNode["wallArray"][part]["ForeArcPoint"].length-1;temp++)
+							{
+								var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["ForeArcPoint"][temp]["x"]),-250,parseFloat(curNode["wallArray"][part]["ForeArcPoint"][temp]["y"]));
+								var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["ForeArcPoint"][temp+1]["x"]),-250,parseFloat(curNode["wallArray"][part]["ForeArcPoint"][temp+1]["y"]));
+								drawline(pt1,pt2,0xffffff);							
+							}							
+						}
+						
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["ForeArcPoint"][curNode["wallArray"][part]["ForeArcPoint"].length-1]["x"]),-250,parseFloat(curNode["wallArray"][part]["ForeArcPoint"][curNode["wallArray"][part]["ForeArcPoint"].length-1]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["TopPoint"][0]["x"]),-250,parseFloat(curNode["wallArray"][part]["TopPoint"][0]["y"]));
+						drawline(pt1,pt2,0xffffff);						
+						
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["TopPoint"][0]["x"]),-250,parseFloat(curNode["wallArray"][part]["TopPoint"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["BackArcPoint"][0]["x"]),-250,parseFloat(curNode["wallArray"][part]["BackArcPoint"][0]["y"]));
+						drawline(pt1,pt2,0xffffff);
+
+						temp=0;
+						if(curNode["wallArray"][part]["ForeArcPoint"].length>1)
+						{
+							if(curNode["wallArray"][part]["BackArcPoint"].length>1)
+							{
+								for(temp=0;temp<curNode["wallArray"][part]["BackArcPoint"].length-1;temp++)
+								{
+									var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["BackArcPoint"][temp]["x"]),-250,parseFloat(curNode["wallArray"][part]["BackArcPoint"][temp]["y"]));
+									var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["BackArcPoint"][temp+1]["x"]),-250,parseFloat(curNode["wallArray"][part]["BackArcPoint"][temp+1]["y"]));
+									drawline(pt1,pt2,0xffffff);							
+								}							
+							}							
+						}
+
+						var pt1 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["BackArcPoint"][curNode["wallArray"][part]["BackArcPoint"].length-1]["x"]),-250,parseFloat(curNode["wallArray"][part]["BackArcPoint"][curNode["wallArray"][part]["BackArcPoint"].length-1]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curNode["wallArray"][part]["EndPoint"][0]["x"]),-250,parseFloat(curNode["wallArray"][part]["EndPoint"][0]["y"]));
+						drawline(pt1,pt2,0xffffff);												
+						//end draw leftwall @ rightwall
+					
+					}
+
+					//slope ok
+					for(var curSlopeIndex=0;curSlopeIndex<curNode["slopes"].length;curSlopeIndex++)
+					{
+						var curSlope = curNode["slopes"][curSlopeIndex];
+						
+						var pt1 = new THREE.Vector3(parseFloat(curSlope["LeftLine"][0]["x"]),-250,parseFloat(curSlope["LeftLine"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curSlope["LeftLine"][1]["x"]),-250,parseFloat(curSlope["LeftLine"][1]["y"]));
+						drawline(pt1,pt2,0x00ff00);		
+						
+						var pt1 = new THREE.Vector3(parseFloat(curSlope["RightLine"][0]["x"]),-250,parseFloat(curSlope["RightLine"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curSlope["RightLine"][1]["x"]),-250,parseFloat(curSlope["RightLine"][1]["y"]));
+						drawline(pt1,pt2,0x00ff00);								
+
+						var pt1 = new THREE.Vector3(parseFloat(curSlope["ControlLine1"][0]["x"]),-250,parseFloat(curSlope["ControlLine1"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curSlope["ControlLine1"][1]["x"]),-250,parseFloat(curSlope["ControlLine1"][1]["y"]));
+						drawline(pt1,pt2,0xffffff);		
+
+						var pt1 = new THREE.Vector3(parseFloat(curSlope["ControlLine2"][0]["x"]),-250,parseFloat(curSlope["ControlLine2"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curSlope["ControlLine2"][1]["x"]),-250,parseFloat(curSlope["ControlLine2"][1]["y"]));
+						drawline(pt1,pt2,0xffff00);		
+						
+						var pt1 = new THREE.Vector3(parseFloat(curSlope["ControlLine3"][0]["x"]),-250,parseFloat(curSlope["ControlLine3"][0]["y"]));
+						var pt2 = new THREE.Vector3(parseFloat(curSlope["ControlLine3"][1]["x"]),-250,parseFloat(curSlope["ControlLine3"][1]["y"]));
+						drawline(pt1,pt2,0xffffff);								
+					}
+				}
+				
+			}
+			
+			/*
+			 * 画线，0-实线，1-虚线
+			 */
+			function drawline(point1,point2,linecolor,lineType=0)
+			{			
+					var geometry = new THREE.Geometry();
+					point1.y=-249.93;
+					point2.y=-249.93;
+					geometry.vertices.push(point1);
+					geometry.vertices.push(point2);
+
+					var material = new THREE.LineDashedMaterial( { color: linecolor, dashSize: 0.5, gapSize: 0.5, linewidth: 2 } );
+					var line = new THREE.Line( geometry, material,THREE.LineSegments );
+					scene.add( line );					
+					
+					if(lineType==1)
+					geometry.computeLineDistances();
+			}			
+			
+			function drawTriangle(point1,point2,point3)
+			{
+				var loader = new THREE.TextureLoader();
+				var texture = loader.load( 'textures/self.jpg' );
+				texture.wrapS  = THREE.ClampToEdgeWrapping;
+				texture.repeat.set( 16, 16 );	        
+		        var material = new THREE.MeshBasicMaterial({map:texture});
+//				var material = new THREE.MeshBasicMaterial( { color: 0x3C3C3C } );
+				var geometry = new THREE.Geometry();
+				point2.y=-250;
+				point1.y=-250;
+				point3.y=-250;
+				geometry.vertices.push( point1 );
+				geometry.vertices.push(point2 );
+				geometry.vertices.push( point3 );
+
+				var face = new THREE.Face3( 0, 1, 2 );
+				geometry.faces.push( face );
+				geometry.computeFaceNormals();	
+				
+				geometry.faceVertexUvs[0].push(
+					[
+					new THREE.Vector2(0,0),
+					new THREE.Vector2(0,1),
+					new THREE.Vector2(1,1)
+					]
+				);
+				geometry.uvsNeedUpdate =true;
+				scene.add( new THREE.Mesh( geometry, material ) );				
+			}
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var container, stats;
+			var camera, scene, renderer;
+
+			var clothGeometry;
+			var sphere;
+			var object;
+
+			init();
+			animate();
+
+			//test data
+			//file:///E:/Projects/MyApplication3/app/src/main/assets/index.html? barnID=PP8
+			function getUrlParam(name) {
+			 var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+			 var r = window.location.search.substr(1).match(reg);
+			 if (r != null) return unescape(r[2]); return null;
+			}
+
+			function initUI()
+			{
+				var API = {
+					'zoomvalue':100,
+					'xRotate':0.0,
+					'yRotate':0.0,
+					'zRotate':0.0,
+					'show model'    	: true,
+					'show background'    	: true,
+					'show 2nd model'	: false,
+					'show mem. info'	: false,
+					'startAnimation'	: false
+				};		
+				
+				
+				var gui = new dat.GUI();
+				gui.add( API, "zoomvalue", 0, 1000, 10 ).onChange(function()
+					{
+						camera.setFocalLength(API['zoomvalue']);
+					});
+				gui.add( API, "xRotate", 0, 360, 2 ).onChange(function()
+					{					
+						var distance =400.0;
+						camera.position.y=distance *Math.cos(2*Math.PI*API["xRotate"]/360.0);
+						camera.position.z=distance *Math.sin(2*Math.PI*API["xRotate"]/360.0);
+					});
+				gui.add( API, "yRotate", 0, 360, 2 ).onChange(function()
+					{
+						var distance =400.0;
+						camera.position.x=distance *Math.cos(2*Math.PI*API["yRotate"]/360.0);
+						camera.position.z=distance *Math.sin(2*Math.PI*API["yRotate"]/360.0);
+					});
+				gui.add( API, "zRotate", 0, 360, 2 ).onChange(function()
+					{
+						var distance =400.0;
+						camera.position.x=distance *Math.cos(2*Math.PI*API["zRotate"]/360.0);
+						camera.position.y=distance *Math.sin(2*Math.PI*API["zRotate"]/360.0);						
+					});
+
+
+				gui.add( API, 'show model' ).onChange( function() {
+						// mesh.visible = API[ 'show model' ];
+						moveObj.visible = API['show model'];
+				} );
+
+				gui.add( API, 'show background' ).onChange( function() {
+						mesh.visible = API['show background'];
+				} );
+				
+				gui.add(API,'startAnimation').onChange(function(){
+					bShowSimu = !bShowSimu;
+					if(!bShowSimu)
+					{
+						moveObj.position.x=0;
+						moveObj.position.z=0;
+						targetObj.position.x=0;
+						targetObj.position.z=0;
+					}
+				});				
+			}
+
+			function init() {
+				
+				initUI();
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				// scene
+				scene = new THREE.Scene();
+				scene.fog = new THREE.Fog( 0x223344, 0, 10000 );
+				// camera
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.x = 0;
+				camera.position.y = -200;
+				camera.position.z = 0;
+				scene.add( camera );
+				
+				// lights
+				var light, materials;
+
+				scene.add( new THREE.AmbientLight( 0xffffff ) );
+
+				light = new THREE.DirectionalLight( 0xffffff, 1.75 );
+				light.position.set( 50000, 10000, 30000 );
+
+				scene.add( light );
+
+				var loader = new THREE.TextureLoader();
+
+				// ground
+				var groundTexture = loader.load( 'textures/background.jpg' );
+				groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
+				groundTexture.repeat.set( 64, 64 );
+				groundTexture.anisotropy = 16;
+
+				var groundMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: groundTexture } );
+				
+				var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 1000, 1000 ), groundMaterial );
+				
+				mesh.position.y = - 251;
+				mesh.rotation.x = - Math.PI / 2;
+				mesh.receiveShadow = true;
+				scene.add( mesh );				
+
+                var material = new THREE.MeshPhongMaterial({    
+                    color: 0xffff00,
+                    specular:0xffffff,
+                    shininess:0
+                });
+                // load font
+//                 var loader = new THREE.FontLoader();
+//                 loader.load('fonts/afont.json', function(font) {
+//                     var mesh = new THREE.Mesh(new THREE.TextGeometry('测试走马灯', {
+//                         font: font,
+//                         size: 15,
+//                         height: 15
+//                     }), material);
+//                     mesh.position.y =-250;
+//                     mesh.position.x = 0;
+//                     mesh.position.z = 0;
+//                     scene.add(mesh);
+//                 });						
+				
+				if(true)
+				{
+				var onProgress = function ( xhr ) {
+					if ( xhr.lengthComputable ) {
+						var percentComplete = xhr.loaded / xhr.total * 100;
+						console.log( Math.round(percentComplete, 2) + '% downloaded' );
+					}
+				};
+
+				var onError = function ( xhr ) { };
+
+				THREE.Loader.Handlers.add( /\.dds$/i, new THREE.DDSLoader() );
+
+				var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.setPath( 'models/' );
+				mtlLoader.load( 'female02.mtl', function( materials ) {
+
+					materials.preload();
+
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.setPath( 'models/' );
+					objLoader.load( 'female02.obj', function ( object ) {
+						object.position.y = -250;
+						object.position.z = 0;
+						object.position.x = 0;
+						
+						object.scale.multiplyScalar(0.05);
+						moveObj = object;
+						scene.add( object );
+
+					}, onProgress, onError );
+
+				});				
+				}				
+				
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setClearColor( 0x000000);
+				
+				container.appendChild( renderer.domElement );
+
+				renderer.shadowMap.enabled = false;
+				
+				// controls
+				var controls = new THREE.OrbitControls( camera, renderer.domElement );
+				controls.maxPolarAngle = Math.PI * 0.4;
+				controls.minDistance = 0;
+				controls.maxDistance = 3000;
+
+				stats = new Stats();
+				container.appendChild( stats.dom );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+				
+				id = setInterval(draw, 100);
+			}
+
+			function draw()
+			{
+				if(bShowSimu)
+				{
+					aniIndex++;
+					aniIndex = aniIndex%CarPoses.length;
+					moveObj.position.x = parseFloat(CarPoses[aniIndex]["x"]);
+//					moveObj.rotation.y = 2.0*Math.PI*parseFloat(CarPoses[aniIndex]["angle"])/360.0;
+					
+					targetObj.x = moveObj.position.x;
+				}
+				bToRepaint= true;
+				renderer.render( scene, camera );
+			}			
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function animate() {
+				requestAnimationFrame( animate );
+				render();
+				stats.update();
+			}
+
+			function render() {
+				if(bToRepaint)
+				{
+		    		if (bDataOK) 
+		    		{
+		    			if (bFirstDraw) 
+		    			{
+		    				drawQuarterTurnNodes();
+		    				drawReverseParkingNodes();
+		    				drawCurveDrivingNodes();
+		    				drawSlopeParkingNodes();
+		    				bFirstDraw = false;
+		    				locateBarn();
+		    			}
+		    		}					
+					camera.lookAt(targetObj);
+					renderer.render( scene, camera );
+					bToRepaint=false;
+				}
+			}
+
+		</script>
+
+	</body>
+</html>

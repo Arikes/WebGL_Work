@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>webGL demo</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000;
+				color: #000;
+				margin: 10px;
+				overflow: hidden;
+			}
+
+		</style>
+		
+		<script type="text/javascript">
+            var playgrounds = null;
+		</script>
+
+	</head>
+
+	<body>		
+	</div>
+		<script src="js/three.min.js"></script>
+		<script src="js/libs/dat.gui.min.js"></script>
+		
+		<script src="js/Detector.js"></script>
+		<script src="js/controls/OrbitControls.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+		<script>
+			var targetObj = new THREE.Vector3(0,0,0);
+			var container, stats;
+			var camera, scene, renderer;
+
+			var pointlightPos=10;
+			var spotlightPos=10;
+			var directionlightPos=10;
+			
+			var pointlight,spotLight;
+			var directionLight;
+
+			if ( ! Detector.webgl ) 
+				Detector.addGetWebGLMessage();
+			
+			init();
+			animate();
+
+			function initUI()
+			{
+				var API = {
+					'zoomvalue':100,
+					'pointlight':10,
+					'spotLight':10,
+					'directionalLight':10,
+					'show background'    	: true
+				};		
+	
+				var gui = new dat.GUI();
+				gui.add( API, "zoomvalue", 0, 1000, 10 ).onChange(function()
+					{
+						camera.setFocalLength(API['zoomvalue']);
+					});
+				gui.add( API, "pointlight", 0, 1000, 5 ).onChange(function()
+					{
+						pointlightPos=API['pointlight'];
+						pointlight.position.set( 0,pointlightPos, 0 );
+					});			
+				gui.add( API, "spotLight", 0, 1000, 5 ).onChange(function()
+					{
+						spotlightPos=API['spotLight'];
+						spotLight.position.set( 0,spotlightPos, 0 );
+					});				
+				gui.add( API, "directionalLight", 0, 1000, 5 ).onChange(function()
+					{
+						directionlightPos=API['directionalLight'];
+						directionLight.position.set( 0,directionlightPos, 0 );
+					});									
+				gui.add( API, 'show background' ).onChange( function() {
+				} );		
+			}
+
+			function init() {
+				
+				initUI();
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				// scene
+				scene = new THREE.Scene();
+				// camera
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.x = 0;
+				camera.position.y = 500;
+				camera.position.z = 0;
+				scene.add( camera );
+				
+				// lights
+
+				scene.add( new THREE.AmbientLight( 0x000000 ) );
+
+				
+				directionLight = new THREE.DirectionalLight( 0xffffff, 1.0 );
+				directionLight.position.set( 0 ,directionlightPos, 0 );
+				scene.add( directionLight );
+				
+				//点光源
+				pointlight = new THREE.PointLight( 0xffffff, 0.5, 1001 );
+				pointlight.position.set( 0,pointlightPos, 0 );
+				scene.add( pointlight );
+				//end 点光源
+				//聚光灯
+				spotLight = new THREE.SpotLight( 0x00ff00 );
+				spotLight.position.set( 0, spotlightPos, 0 );
+				
+				spotLight.castShadow = true;
+				spotLight.castShadow = true;
+				
+				spotLight.shadow.mapSize.width = 1024;
+				spotLight.shadow.mapSize.height = 1024;
+				
+				spotLight.shadow.camera.near = 500;
+				spotLight.shadow.camera.far = 4000;
+				spotLight.shadow.camera.fov = 30;				
+				
+				scene.add( spotLight );
+				//end 聚光灯
+
+				var loader = new THREE.TextureLoader();
+				// ground
+				var groundTexture = loader.load( 'textures/test.jpg' );
+				groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
+				groundTexture.repeat.set( 1, 1 );
+				groundTexture.anisotropy = 16;
+
+				var groundMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xff0000, map: groundTexture } );
+				var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 1000, 1000 ), groundMaterial );
+				
+				mesh.position.y = 0;
+				mesh.rotation.x = -Math.PI/2.0;
+				mesh.receiveShadow = true;
+				scene.add( mesh );		
+				
+				
+				var sphere = createMesh(new THREE.SphereGeometry(5, 20, 20), "textures/test.jpg");
+				scene.add(sphere);				
+				
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setClearColor( 0x000000);
+				
+				container.appendChild( renderer.domElement );
+
+				renderer.shadowMap.enabled = false;
+				// controls
+				var controls = new THREE.OrbitControls( camera, renderer.domElement );
+				controls.maxPolarAngle = Math.PI * 0.4;
+				controls.minDistance = 0;
+				controls.maxDistance = 3000;
+
+				stats = new Stats();
+				container.appendChild( stats.dom );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function animate() {
+				requestAnimationFrame( animate );
+				render();
+				stats.update();
+			}
+
+			function render() {
+					camera.lookAt(targetObj);
+					renderer.render( scene, camera );
+			}
+
+			function createMesh(geom, imageFile) {
+			   var texture = THREE.ImageUtils.loadTexture(imageFile);
+			   var mat = new THREE.MeshPhongMaterial();
+			   mat.map = texture;//材质的Map属性用于添加纹理
+			   var mesh = new THREE.Mesh(geom, mat);
+			   return mesh;
+			}
+
+			/*
+			 * 画线，0-实线，1-虚线
+			 */
+			function drawline(point1,point2,linecolor,lineType=0)
+			{			
+					var geometry = new THREE.Geometry();
+					point1.y=-249.93;
+					point2.y=-249.93;
+					geometry.vertices.push(point1);
+					geometry.vertices.push(point2);
+
+					var material = new THREE.LineDashedMaterial( { color: linecolor, dashSize: 0.5, gapSize: 0.5, linewidth: 2 } );
+					var line = new THREE.Line( geometry, material,THREE.LineSegments );
+					scene.add( line );					
+					
+					if(lineType==1)
+					geometry.computeLineDistances();
+			}			
+			/*
+			 * 画三角形
+			 */
+			function drawTriangle(point1,point2,point3)
+			{
+		        var texture = THREE.ImageUtils.loadTexture("textures/road2.jpg",null,function(t)
+		        {
+		        });
+		        var material = new THREE.MeshBasicMaterial({map:texture});
+				var geometry = new THREE.Geometry();
+				point2.y=-250;
+				point1.y=-250;
+				point3.y=-250;
+				geometry.vertices.push( point1 );
+				geometry.vertices.push(point2 );
+				geometry.vertices.push( point3 );
+				
+				var face = new THREE.Face3( 0, 1, 2 );
+				geometry.faces.push( face );
+				geometry.computeFaceNormals();
+				scene.add( new THREE.Mesh( geometry, material ) );				
+			}
+		</script>
+
+	</body>
+</html>

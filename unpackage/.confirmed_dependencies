@@ -1,0 +1,38 @@
+{
+	"index.html": {
+		"resources": [
+			"xmlExample/Map_Field.xml",
+			"js/Detector.js",
+			"models/fll.mtl",
+			"js/jquery.min.js",
+			"js/libs/stats.min.js",
+			"js/loaders/DDSLoader.js",
+			"textures/patterns/circuit_pattern.png",
+			"js/controls/OrbitControls.js",
+			"textures/road.jpg",
+			"js/loaders/OBJLoader.js",
+			"js/Cloth.js",
+			"js/loaders/MTLLoader.js",
+			"js/three.min.js",
+			"js/libs/dat.gui.min.js",
+			"models/fll.obj",
+			"models/02_-_Default1noCulling.JPG",
+			"models/female02.mtl",
+			"models/female02.obj",
+			"models/03_-_Default1noCulling.JPG",
+			"models/01_-_Default1noCulling.JPG",
+			"textures/grass.jpg",
+			"xmlExample/route.xml",
+			"fonts/afont.json",
+			"models/car2.mtl",
+			"models/car2.obj",
+			"textures/grass2.jpg",
+			"js/SkyShader.js",
+			"textures/route.jpg",
+			"textures/roadbk.png",
+			"js/jquery-ui.min.js",
+			"css/jquery-ui.min.css",
+			"textures/road2.jpg"
+		]
+	}
+}

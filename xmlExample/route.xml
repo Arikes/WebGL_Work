@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Site>
+	<CarPos>
+		<Position x="0" y="0" z="75.55" angle="0"/>
+		<Position x="5" y="0" z="75.55" angle="20"/>
+		<Position x="10" y="0" z="75.55" angle="40.0"/>
+		<Position x="15" y="0" z="75.55" angle="60.0"/>
+		<Position x="20" y="0" z="75.55" angle="80.0"/>
+		<Position x="25" y="0" z="75.55" angle="90.0"/>
+		<Position x="30" y="0" z="75.55" angle="110.0"/>
+		<Position x="35" y="0" z="75.55" angle="130.0"/>
+		<Position x="40" y="0" z="75.55" angle="150.0"/>
+		<Position x="45" y="0" z="75.55" angle="170.0"/>
+	</CarPos>
+</Site>
