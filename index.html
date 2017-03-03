@@ -423,11 +423,29 @@
 		<script src="js/jquery-ui.min.js"></script>
 		<link href="css/jquery-ui.min.css" rel="stylesheet">
 		<script>
+			function sliderDataChange()
+			{
+				var value = $( "#slider" ).slider( "value" );
+
+				if (!bShowSimu) 
+				{
+					aniIndex = parseInt(value/100.0*CarPoses.length);
+					moveObj.position.x = parseFloat(CarPoses[aniIndex]["x"]);
+					moveObj.visible = true;
+				}
+			}	
 			$( "#slider" ).slider();
 			$( "#slider" ).slider({
-				range: true,
-				values: [ 0, 67 ]
-			});
+			    orientation: "horizontal",
+			    range: "min",
+			    max: 100,
+			    value: 50,
+			    slide: sliderDataChange,
+      			change: sliderDataChange
+				});
+
+
+
 
 			var meninfo=" 易驾佳WebGL Demo测试,对不起，您开的汽车左轮胎压线了";  
 			  
@@ -918,6 +936,10 @@
 						targetObj.position.x=0;
 						targetObj.position.z=0;
 					}
+					aniIndex=0;
+					$( "#slider" ).slider({
+						value: 0
+					});						
 				});				
 			}
 
@@ -1037,9 +1059,18 @@
 				if(bShowSimu)
 				{
 					aniIndex++;
-					aniIndex = aniIndex%CarPoses.length;
+					var percent = aniIndex/CarPoses.length*100;
+
+					$( "#slider" ).slider({
+						value: percent				
+					});
+						
+					if (percent>=100) 
+					{
+						moveObj.visible = true;
+						bShowSimu=false;
+					}
 					moveObj.position.x = parseFloat(CarPoses[aniIndex]["x"]);
-//					moveObj.rotation.y = 2.0*Math.PI*parseFloat(CarPoses[aniIndex]["angle"])/360.0;
 					
 					targetObj.x = moveObj.position.x;
 				}
