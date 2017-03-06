@@ -147,7 +147,7 @@
 						camera.position.y = 0;
 						camera.position.z = centerY2;
 						moveObj.position.x = centerX;
-						moveObj.position.y=-250;
+						moveObj.position.y=-249.5;
 						moveObj.position.z=centerY;							
 						targetObj =new THREE.Vector3(centerX,-250,centerY);					
 			}
@@ -403,7 +403,7 @@
 		<div id="info" style="color: #ff0000;"><br/>
 	    <div id="wenzi" style="height: 50px;">  
 	    </div>  		
-	    <div id="slider" style="width: 50%;margin: 0 auto;"></div>			    
+	    <div id="slider" style="width: 50%;margin: 0 auto;visible:0;"></div>			    
 
     	<script type="text/javascript" src="js/jquery.min.js"></script> 
 		<script src="js/three.min.js"></script>
@@ -423,6 +423,44 @@
 		<script src="js/jquery-ui.min.js"></script>
 		<link href="css/jquery-ui.min.css" rel="stylesheet">
 		<script>
+			var materialMap={};
+			var loader = new THREE.TextureLoader();
+			var backgroundTexture = loader.load( 'textures/grass.jpg' );
+			backgroundTexture.wrapS = backgroundTexture.wrapT = THREE.RepeatWrapping;
+			backgroundTexture.repeat.set( 16, 16 );
+			backgroundTexture.anisotropy = 16;
+			var backgroundMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: backgroundTexture } );
+			materialMap["background"] = backgroundMaterial;
+
+			var groundTexture_front = loader.load( 'textures/skybox/alps_ft.jpg' );
+			groundTexture_front.wrapS = groundTexture_front.wrapT = THREE.RepeatWrapping;
+			groundTexture_front.repeat.set( 1, 1 );
+			groundTexture_front.anisotropy = 16;
+			var groundMaterial_front = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: groundTexture_front ,side:THREE.DoubleSide} );		
+			materialMap["frontMat"]	= groundMaterial_front;
+
+			var groundTexture_back = loader.load( 'textures/skybox/alps_bk.jpg' );
+			groundTexture_back.wrapS = groundTexture_back.wrapT = THREE.RepeatWrapping;
+			groundTexture_back.repeat.set( 1, 1 );
+			groundTexture_back.anisotropy = 16;
+			var groundMaterial_back = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: groundTexture_back ,side:THREE.DoubleSide} );		
+			materialMap["backMat"]	= groundMaterial_front;
+
+			var groundTexture_right = loader.load( 'textures/skybox/alps_rt.jpg' );
+			groundTexture_right.wrapS = groundTexture_right.wrapT = THREE.RepeatWrapping;
+			groundTexture_right.repeat.set( 1, 1 );
+			groundTexture_right.anisotropy = 16;
+			var groundMaterial_right = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: groundTexture_right ,side:THREE.DoubleSide} );	
+			materialMap["rightMat"]	= groundMaterial_right;		
+
+			var groundTexture_left = loader.load( 'textures/skybox/alps_lf.jpg' );
+			groundTexture_left.wrapS = groundTexture_left.wrapT = THREE.RepeatWrapping;
+			groundTexture_left.repeat.set( 1, 1 );
+			groundTexture_left.anisotropy = 16;
+			var groundMaterial_left = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: groundTexture_left ,side:THREE.DoubleSide} );	
+			materialMap["leftMat"]	= groundMaterial_right;				
+
+
 			function sliderDataChange()
 			{
 				var value = $( "#slider" ).slider( "value" );
@@ -928,7 +966,7 @@
 				} );
 				
 				gui.add(API,'startAnimation').onChange(function(){
-					bShowSimu = !bShowSimu;
+					bShowSimu = !bShowSimu;				
 					if(!bShowSimu)
 					{
 						moveObj.position.x=0;
@@ -952,9 +990,7 @@
 
 				// scene
 				scene = new THREE.Scene();
-				scene.fog=new THREE.Fog(0xc0c0c0,200,1000);
-//				scene.fog = new THREE.Fog( 0x223344, 30, 1000 );
-				// camera
+				 scene.fog=new THREE.Fog(0xc0c0c0,200,1000);
 				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
 				camera.position.x = 0;
 				camera.position.y = -200;
@@ -969,81 +1005,40 @@
 				light = new THREE.DirectionalLight( 0xffffff, 1.75 );
 				light.position.set( 3000, 3000, 3000 );
 
-//				scene.add( light );
-
-				var loader = new THREE.TextureLoader();
-
-				// ground
-				var groundTexture = loader.load( 'textures/grass.jpg' );
-//				var groundTexture = loader.load( 'textures/skybox/alps_up.jpg' );
-				groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
-				groundTexture.repeat.set( 16, 16 );
-				groundTexture.anisotropy = 16;
-
-				var groundMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: groundTexture } );
+				// scene.add( light );
 				
-				var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 1000, 1000 ), groundMaterial );
+				var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 1000, 1000 ), materialMap["background"] );
 				
 				mesh.position.y = - 251;
 				mesh.rotation.x = - Math.PI / 2;
 				mesh.receiveShadow = true;
 				scene.add( mesh );				
 
-				//left
 				var geometry_left = new THREE.PlaneBufferGeometry( 1000, 1000 );
-				var groundTexture_left = loader.load( 'textures/skybox/alps_lf.jpg' );
-				groundTexture_left.wrapS = groundTexture_left.wrapT = THREE.RepeatWrapping;
-				groundTexture_left.repeat.set( 1, 1 );
-				groundTexture_left.anisotropy = 16;
-				var groundMaterial_left = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: groundTexture_left } );
-				var plane_left = new THREE.Mesh( geometry_left, groundMaterial_left );
+				var plane_left = new THREE.Mesh( geometry_left, materialMap["leftMat"] );
 				plane_left.position.x=0;
 				plane_left.position.z=-500;
 				scene.add( plane_left );
 				
-				//right
-				//left
 				var geometry_right = new THREE.PlaneBufferGeometry( 1000, 1000 );
-				var groundTexture_right = loader.load( 'textures/skybox/alps_rt.jpg' );
-				groundTexture_right.wrapS = groundTexture_right.wrapT = THREE.RepeatWrapping;
-				groundTexture_right.repeat.set( 1, 1 );
-				groundTexture_right.anisotropy = 16;
-				var groundMaterial_right = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: groundTexture_right ,side:THREE.DoubleSide} );
-				var plane_right = new THREE.Mesh( geometry_right, groundMaterial_right );
+				var plane_right = new THREE.Mesh( geometry_right, materialMap["rightMat"] );
 				plane_right.position.x=0;
 				plane_right.position.z=500;
 				scene.add( plane_right );				
-				
-				
+							
 				var geometry_front = new THREE.PlaneBufferGeometry( 1000, 1000 );
-				var groundTexture_front = loader.load( 'textures/skybox/alps_ft.jpg' );
-				groundTexture_front.wrapS = groundTexture_front.wrapT = THREE.RepeatWrapping;
-				groundTexture_front.repeat.set( 1, 1 );
-				groundTexture_front.anisotropy = 16;
-				var groundMaterial_front = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: groundTexture_front ,side:THREE.DoubleSide} );
-				var plane_front = new THREE.Mesh( geometry_front, groundMaterial_front );
+				var plane_front = new THREE.Mesh( geometry_front, materialMap["frontMat"] );
 				plane_front.position.x=500;
 				plane_front.position.z=0;
 				plane_front.rotation.y = Math.PI/2.0;
 				scene.add( plane_front );			
 				
 				var geometry_back = new THREE.PlaneBufferGeometry( 1000, 1000 );
-				var groundTexture_back = loader.load( 'textures/skybox/alps_ft.jpg' );
-				groundTexture_back.wrapS = groundTexture_back.wrapT = THREE.RepeatWrapping;
-				groundTexture_back.repeat.set( 1, 1 );
-				groundTexture_back.anisotropy = 16;
-				var groundMaterial_back = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, map: groundTexture_back ,side:THREE.DoubleSide} );
-				var plane_back = new THREE.Mesh( geometry_back, groundMaterial_back );
+				var plane_back = new THREE.Mesh( geometry_back, materialMap["backMat"] );
 				plane_back.position.x=-500;
 				plane_back.position.z=0;
 				plane_back.rotation.y = Math.PI/2.0;
-				scene.add( plane_back );							
-
-                var material = new THREE.MeshPhongMaterial({    
-                    color: 0xffff00,
-                    specular:0xffffff,
-                    shininess:0
-                });					
+				scene.add( plane_back );			
 				
 				if(true)
 				{

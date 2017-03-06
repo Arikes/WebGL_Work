@@ -135,13 +135,13 @@
 				groundTexture.repeat.set( 1, 1 );
 				groundTexture.anisotropy = 16;
 
-				var groundMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xff0000, map: groundTexture } );
-				var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 1000, 1000 ), groundMaterial );
+				// var groundMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xff0000, map: groundTexture } );
+				// var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 1000, 1000 ), groundMaterial );
 				
-				mesh.position.y = 0;
-				mesh.rotation.x = -Math.PI/2.0;
-				mesh.receiveShadow = true;
-				scene.add( mesh );		
+				// mesh.position.y = 0;
+				// mesh.rotation.x = -Math.PI/2.0;
+				// mesh.receiveShadow = true;
+				// scene.add( mesh );		
 				
 				
 				var sphere = createMesh(new THREE.SphereGeometry(5, 20, 20), "textures/test.jpg");

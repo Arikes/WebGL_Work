@@ -32,7 +32,13 @@
 			"textures/roadbk.png",
 			"js/jquery-ui.min.js",
 			"css/jquery-ui.min.css",
-			"textures/road2.jpg"
+			"textures/road2.jpg",
+			"textures/skybox/alps_rt.jpg",
+			"models/navigator.obj",
+			"textures/skybox/alps_bk.jpg",
+			"textures/skybox/alps_ft.jpg",
+			"models/navigator.mtl",
+			"textures/skybox/alps_lf.jpg"
 		]
 	}
 }
